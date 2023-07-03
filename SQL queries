@@ -1,0 +1,187 @@
+SELECT * FROM orders
+SELECT * FROM customers
+SELECT * FROM products
+SELECT * FROM regions
+
+-- How many orders were processed? (5129 orders )
+
+SELECT COUNT(DISTINCT([Order ID])) AS total_orders FROM orders
+
+-- What is the total revenue? (8024275 )
+
+SELECT 
+	SUM(sales) AS total_Revenue 
+FROM products
+
+-- The average profit, and shipping cost per sale?
+
+WITH average_values  AS (
+	SELECT 
+		ROUND(AVG(Profit),2) AS avg_profit, 
+		ROUND(AVG([Shipping Cost]),2) AS avg_shipping 
+	FROM products
+ )
+
+SELECT * FROM average_values
+
+-- Which product category generates the highest sales revenue? (Fashion Category )
+
+SELECT 
+	[Product Category], 
+	SUM(Sales) AS total_revenue 
+FROM products
+GROUP BY [Product Category]
+ORDER BY total_revenue DESC
+
+-- What is the profit margin for each product category?
+
+SELECT 
+	[Product Category], 
+	SUM(sales) AS total_revenue, 
+	SUM(Profit) AS total_profit, 
+	(SUM(profit)/SUM(sales))*100 AS profit_margin 
+FROM products
+GROUP BY [Product Category]
+ORDER BY total_profit DESC
+
+-- What are the top 10 selling products?
+
+SELECT 
+	TOP 10 Product, 
+	SUM(Quantity) AS total_unit_sold 
+FROM products
+GROUP BY Product
+ORDER BY total_unit_sold DESC
+
+-- What are the worst 10-selling products
+
+SELECT 
+	TOP 10 Product, 
+	SUM(Quantity) AS total_unit_sold 
+FROM products
+GROUP BY Product
+ORDER BY total_unit_sold ASC
+
+-- How does the average order value vary across different customer segments?
+
+SELECT 
+	c.Segment, 
+	ROUND(avg(p.sales),2) AS avg_order_value 
+FROM customers c
+FULL JOIN products p
+ON c.[Order ID] = p.[Order ID]
+WHERE c.Segment IS NOT NULL
+GROUP BY c.Segment
+ORDER BY avg_order_value DESC
+-- 8. What are the monthly trends in sales and Which months or seasons experience a significant increase or decrease in sales?
+
+--8(A) What are the total orders & revenue per month
+
+SELECT 
+	DATENAME(month, o.[Order Date]) AS month_name, 
+	SUM(p.Quantity) AS total_orders, 
+	SUM(p.Sales) AS total_revenue
+
+FROM orders o
+FULL JOIN products p
+ON o.[Order ID] = p.[Order ID]
+
+WHERE o.Months IS NOT NULL
+GROUP BY DATENAME(month, o.[Order Date])
+ORDER BY MIN(o.[Order Date])
+
+--8(B) Top 3 Months based on revenue
+
+SELECT 
+	TOP 3 DATENAME(month, o.[Order Date]) AS month_name, 
+	SUM(p.Quantity) AS total_orders, 
+	SUM(p.Sales) AS total_revenue 
+
+FROM orders o
+FULL JOIN products p
+ON o.[Order ID] = p.[Order ID]
+
+WHERE o.Months IS NOT NULL
+GROUP BY DATENAME(month, o.[Order Date])
+ORDER BY total_revenue DESC
+
+--8(C) Worst 3 months based on revenue
+
+SELECT 
+	TOP 3 DATENAME(month, o.[Order Date]) AS month_name, 
+	SUM(p.Quantity) AS total_orders, 
+	SUM(p.Sales) AS total_revenue 
+
+FROM orders o
+FULL JOIN products p
+ON o.[Order ID] = p.[Order ID]
+
+WHERE o.Months IS NOT NULL
+GROUP BY DATENAME(month, o.[Order Date])
+ORDER BY total_revenue 
+
+-- 9. How does the sales performance vary across different regions or countries?
+
+SELECT 
+	r.Country,
+	SUM(p.Quantity) AS total_orders, 
+	SUM(Sales) AS total_revenue, 
+	SUM(Profit) AS total_profit 
+
+FROM products p
+FULL JOIN regions r
+ON p.[Order ID] = r.[Order ID]
+GROUP BY r.Country 
+
+--9(A) Top 10 Countries having highest orders, revenue & profit
+
+SELECT 
+	TOP 10 r.Country,
+	SUM(p.Quantity) AS total_orders, 
+	SUM(Sales) AS total_revenue, 
+	SUM(Profit) AS total_profit 
+
+FROM products p
+FULL JOIN regions r
+ON p.[Order ID] = r.[Order ID]
+GROUP BY r.Country
+ORDER BY total_orders DESC
+
+--9(B) Top 10 Countries having lowest orders, revenue & profits
+
+SELECT 
+	TOP 10 r.Country,
+	SUM(p.Quantity) AS total_orders, 
+	SUM(Sales) AS total_revenue, 
+	SUM(Profit) AS total_profit 
+
+FROM products p
+FULL JOIN regions r
+ON p.[Order ID] = r.[Order ID]
+GROUP BY r.Country
+ORDER BY total_orders ASC
+
+--10. What is the average time to process an order for each ship mode?
+
+WITH shipping_data AS (
+
+SELECT 
+	[Ship Mode],
+	order_date, 
+	ship_date, 
+	DATEDIFF(day, order_date, ship_date) AS ship_days
+
+FROM 
+(	SELECT 
+			CONVERT (DATE, [Order Date]) AS order_date, 
+			CONVERT (DATE, [Ship Date]) AS ship_date, 
+			[Ship Mode] 
+	FROM orders ) AS shipping_date 
+)
+
+SELECT 
+	[Ship Mode], 
+	AVG(ship_days) AS avg_ship_days 
+
+FROM shipping_data
+GROUP BY [Ship Mode]
